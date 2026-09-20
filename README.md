@@ -81,14 +81,64 @@ Drilling into the incident shows the full attack story: the `kevka` user context
 
 ---
 
+## 7. Hunting the Alerts with KQL (Advanced Hunting)
+
+Rather than only browsing alerts in the Incidents queue, I generated a couple more test alerts — including a classic **EICAR test file** (the industry-standard, harmless antivirus test string) — and used Defender's **Advanced Hunting** page (Hunting → Advanced hunting → *Query in editor*) to pull them back with KQL.
+
+**First pass — basic alert lookup:**
+
+```kql
+AlertInfo
+| where Timestamp > ago(1d)
+| project Timestamp, AlertId, Title, Severity, Category
+| order by Timestamp desc
+```
+
+This pulled back the alert Defender generated when it caught the EICAR file:
+
+![Advanced hunting results showing the EICAR_Test_File malware alert](images/12-kql-alertinfo-eicar-result.png)
+
+| Timestamp | Alert | Severity | Category |
+|---|---|---|---|
+| Sep 20, 2026 5:04:30 PM | `'EICAR_Test_File' malware was prevented` | Informational | Malware |
+
+![Expanded alert details for the EICAR test alert](images/13-eicar-alert-details.png)
+
+**Second pass — joining in the device name:**
+
+`AlertInfo` alone doesn't say which device an alert happened on — that lives in a separate table, `AlertEvidence`. I joined the two on `AlertId` (filtering `AlertEvidence` down to just `Machine`-type entities) to pull the device name into the same results:
+
+```kql
+AlertInfo
+| join kind=inner (
+    AlertEvidence
+    | where EntityType == "Machine"
+    | project AlertId, DeviceName
+) on AlertId
+| project Timestamp, AlertId, Title, Severity, Category, DeviceName
+| order by Timestamp desc
+```
+
+This confirmed the alert traced back to the same lab VM used throughout this project, `desktop-uogq7hk`:
+
+![Advanced hunting join query results showing the resolved device name](images/14-kql-join-query-result.png)
+
+---
+
 ## Summary / Lessons Learned
 
 - A Defender "access denied" error is often a **licensing** problem (Microsoft 365 E5), not a permissions bug.
 - A device won't generate incidents until it's **onboarded**, and onboarding can take up to 30 minutes to reflect in the portal — don't assume it failed just because it's not immediate.
 - Microsoft's EDR detection test needs the target machine **listening on port 80** (via IIS or another web server) to serve the test payload — this is easy to miss if you jump straight to running the test command.
 - Successfully generating and reviewing a test incident is a good way to validate that Defender's full pipeline — sensor, cloud detection, and alerting — is actually working, not just "connected."
-- 
+- `AlertInfo` doesn't carry device context by itself — joining it with `AlertEvidence` (filtered to `Machine` entities) on `AlertId` is the pattern for pulling the affected device into alert-level queries.
 
-- Confirm exactly which token/session identifier is most reliable to join on across tables (e.g., `LogonId` vs a sign-in `CorrelationId`) once in Advanced Hunting — this may vary by table
-- Check whether the M365 E5 trial's Defender for Endpoint tier includes full Advanced Hunting retention, or if there's a data retention limit to plan around
-- Consider adding a second VM later (e.g., a lightweight client) to generate more realistic cross-device sign-in activity to hunt across
+---
+
+## Next Steps / Open Questions
+
+A few things to dig into as this lab grows:
+
+- Confirm which token/session identifier is most reliable to join on across tables (e.g., `LogonId` vs. a sign-in `CorrelationId`) in Advanced Hunting — this may vary table to table.
+- Check whether the Microsoft 365 E5 trial's Defender for Endpoint tier includes full Advanced Hunting retention, or if there's a data retention limit to plan around.
+- Add a second VM (a lightweight client) to generate more realistic cross-device sign-in activity to hunt across.
