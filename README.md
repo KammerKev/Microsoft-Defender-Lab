@@ -71,7 +71,7 @@ With port 80 confirmed listening, I ran Microsoft's test command, which download
 
 ## 6. Result: Live Incident Detected
 
-The test triggered a real incident in Defender — **"Execution incident on one endpoint"** — confirming the sensor and detection pipeline were fully working end to end.
+The test triggered a real incident in Defender **"Execution incident on one endpoint"** confirming the sensor and detection pipeline were fully working end to end.
 
 ![Defender Incidents queue showing the new "Execution incident on one endpoint"](images/10-incident-created.png)
 
@@ -83,7 +83,7 @@ Drilling into the incident shows the full attack story: the `kevka` user context
 
 ## 7. Hunting the Alerts with KQL (Advanced Hunting)
 
-Rather than only browsing alerts in the Incidents queue, I generated a couple more test alerts — including a classic **EICAR test file** (the industry-standard, harmless antivirus test string) — and used Defender's **Advanced Hunting** page (Hunting → Advanced hunting → *Query in editor*) to pull them back with KQL.
+Rather than only browsing alerts in the Incidents queue, I generated a couple more test alerts, including a classic **EICAR test file** (the industry-standard, harmless antivirus test string) and used Defender's **Advanced Hunting** page (Hunting → Advanced hunting → *Query in editor*) to pull them back with KQL.
 
 **First pass — basic alert lookup:**
 
